@@ -409,33 +409,46 @@ function App() {
       saveStats(nextStats)
     }
 
-    // Submit score for daily or custom seeds
+    // Submit score for daily or custom seeds. If the player hasn't set a
+    // display name yet, prompt for one and resubmit when they save —
+    // otherwise the score would silently no-op and never reach the
+    // leaderboard, which is exactly what was happening in practice.
     if (mode === 'daily' || mode === 'custom') {
       const seedKind = mode === 'daily' ? 'daily' : 'custom'
       const seedId = mode === 'daily' ? game.dailyDate : customSeed!
       const finalTiles = game.tiles
         .filter((t) => !t.isAbsorbed)
         .map((t) => ({ row: t.row, col: t.col, tier: t.tier }))
-      submitScore({
-        variant,
-        seedKind,
-        seedId,
-        score: game.score,
-        highestTier: game.highestTier,
-        moveCount: game.moveCount,
-        finalTiles,
-      })
-        .then((result) => {
-          if (result.ok && result.submitted) {
-            toast.success('Submitted to leaderboard', {
-              description: 'Open the leaderboard to see your rank',
-            })
-            setLeaderboardRefreshKey((k) => k + 1)
-          }
+
+      const doSubmit = () => {
+        submitScore({
+          variant,
+          seedKind,
+          seedId,
+          score: game.score,
+          highestTier: game.highestTier,
+          moveCount: game.moveCount,
+          finalTiles,
         })
-        .catch(() => {
-          // ignore network errors silently
-        })
+          .then((result) => {
+            if (result.ok && result.submitted) {
+              toast.success('Submitted to leaderboard', {
+                description: 'Open the leaderboard to see your rank',
+              })
+              setLeaderboardRefreshKey((k) => k + 1)
+            }
+          })
+          .catch(() => {
+            // ignore network errors silently
+          })
+      }
+
+      if (!getDisplayName()) {
+        setPendingDisplayNameAction(() => doSubmit)
+        setDisplayNameModalOpen(true)
+      } else {
+        doSubmit()
+      }
     }
   }, [
     game.isOver,
