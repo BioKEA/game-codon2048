@@ -6,6 +6,7 @@ import {
   getClientId,
   getDisplayName,
   type LeaderboardEntry,
+  type LeaderboardWindow,
   type RankInfo,
   type SeedKind,
 } from '@/lib/leaderboard'
@@ -34,15 +35,22 @@ export function Leaderboard({
   refreshKey,
 }: Props) {
   const [variant, setVariant] = useState<'classic' | 'lab'>(defaultVariant)
+  const [view, setView] = useState<LeaderboardWindow>('today')
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [rank, setRank] = useState<RankInfo>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const myClientId = getClientId()
   const myName = getDisplayName()
+  // Time-window tabs are only meaningful for daily seeds; custom seeds
+  // are a single bucket and the window has no effect.
+  const showWindowTabs = defaultSeedKind === 'daily'
 
   useEffect(() => {
-    if (open) setVariant(defaultVariant)
+    if (open) {
+      setVariant(defaultVariant)
+      setView('today')
+    }
   }, [open, defaultVariant])
 
   useEffect(() => {
@@ -55,13 +63,19 @@ export function Leaderboard({
         variant,
         seedKind: defaultSeedKind,
         seedId: defaultSeedId,
+        window: view,
         limit: 100,
       }),
-      fetchMyRank({
-        variant,
-        seedKind: defaultSeedKind,
-        seedId: defaultSeedId,
-      }),
+      // "Your rank" pin only makes sense for the same-seed today view —
+      // the personal-best key is keyed on (variant, seedKind, seedId),
+      // so cross-day windows would always miss.
+      view === 'today'
+        ? fetchMyRank({
+            variant,
+            seedKind: defaultSeedKind,
+            seedId: defaultSeedId,
+          })
+        : Promise.resolve(null),
     ]).then(([listResult, r]) => {
       if (cancelled) return
       if (listResult.ok) {
@@ -77,7 +91,7 @@ export function Leaderboard({
     return () => {
       cancelled = true
     }
-  }, [open, variant, defaultSeedKind, defaultSeedId, refreshKey])
+  }, [open, variant, view, defaultSeedKind, defaultSeedId, refreshKey])
 
   useEffect(() => {
     if (!open) return
@@ -124,19 +138,44 @@ export function Leaderboard({
               </span>
             </div>
             <h2 className="font-sans text-xl font-semibold text-white">
-              {defaultSeedLabel}
+              {showWindowTabs && view !== 'today'
+                ? view === 'week'
+                  ? 'Last 7 days'
+                  : 'All time'
+                : defaultSeedLabel}
             </h2>
-            <div className="mt-2 inline-flex items-center gap-0.5 rounded-md border border-cyan-400/15 bg-slate-950/60 p-0.5">
-              <VariantTab
-                active={variant === 'classic'}
-                onClick={() => setVariant('classic')}
-                label="Classic"
-              />
-              <VariantTab
-                active={variant === 'lab'}
-                onClick={() => setVariant('lab')}
-                label="Lab"
-              />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <div className="inline-flex items-center gap-0.5 rounded-md border border-cyan-400/15 bg-slate-950/60 p-0.5">
+                <VariantTab
+                  active={variant === 'classic'}
+                  onClick={() => setVariant('classic')}
+                  label="Classic"
+                />
+                <VariantTab
+                  active={variant === 'lab'}
+                  onClick={() => setVariant('lab')}
+                  label="Lab"
+                />
+              </div>
+              {showWindowTabs && (
+                <div className="inline-flex items-center gap-0.5 rounded-md border border-amber-400/15 bg-slate-950/60 p-0.5">
+                  <VariantTab
+                    active={view === 'today'}
+                    onClick={() => setView('today')}
+                    label="Today"
+                  />
+                  <VariantTab
+                    active={view === 'week'}
+                    onClick={() => setView('week')}
+                    label="Week"
+                  />
+                  <VariantTab
+                    active={view === 'all'}
+                    onClick={() => setView('all')}
+                    label="All-time"
+                  />
+                </div>
+              )}
             </div>
           </div>
           <button
@@ -197,9 +236,13 @@ export function Leaderboard({
         </div>
 
         <footer className="border-t border-amber-400/15 px-6 py-3 font-mono text-[9px] uppercase tracking-[0.22em] text-slate-500">
-          {defaultSeedKind === 'daily'
+          {defaultSeedKind === 'custom'
+            ? 'Custom seed · share to compare'
+            : view === 'today'
             ? 'Resets daily · names are unverified'
-            : 'Custom seed · share to compare'}
+            : view === 'week'
+            ? 'Best run per player · last 7 days'
+            : 'Best run per player · all time'}
         </footer>
       </aside>
     </>

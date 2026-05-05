@@ -163,19 +163,54 @@ export async function submitScore(args: {
 
 export type FetchResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
+export type LeaderboardWindow = 'today' | 'week' | 'all'
+
+// Inclusive start of the rolling 7-day window ending today. Lex compare
+// on YYYY-MM-DD seeds is chronological, so this is what we hand to the
+// seedFrom range filter on the shared client.
+export function weekStart(today: string): string {
+  const d = new Date(today + 'T00:00:00Z')
+  d.setUTCDate(d.getUTCDate() - 6)
+  return d.toISOString().slice(0, 10)
+}
+
 export async function fetchLeaderboard(args: {
   variant: Variant
   seedKind: SeedKind
   seedId: string
+  // Time window — only consulted for daily seeds. Custom seeds always
+  // resolve to that exact seed regardless of window.
+  window?: LeaderboardWindow
   limit?: number
 }): Promise<FetchResult<LeaderboardEntry[]>> {
   try {
-    const entries = await leaderboard.getTopScores({
+    const win = args.window ?? 'today'
+    const useRange = args.seedKind === 'daily' && win !== 'today'
+    const opts: {
+      gameId: string
+      mode: string
+      seed?: string
+      seedFrom?: string
+      seedTo?: string
+      limit: number
+    } = {
       gameId: GAME_ID,
       mode: modeFor(args.variant, args.seedKind),
-      seed: args.seedId,
       limit: args.limit ?? 100,
-    })
+    }
+    if (useRange) {
+      // Pull a generous slice so the per-client dedupe still leaves a
+      // full top-N after collapsing repeat posters.
+      opts.limit = Math.max(opts.limit, (args.limit ?? 100) * 4)
+      if (win === 'week') {
+        opts.seedFrom = weekStart(args.seedId)
+        opts.seedTo = args.seedId
+      }
+      // win === 'all' → no seed filter
+    } else {
+      opts.seed = args.seedId
+    }
+    const entries = await leaderboard.getTopScores(opts)
 
     // Collapse to one row per client (their best), matching the legacy RPC
     // which used `distinct on (client_id)`. The shared schema returns raw
