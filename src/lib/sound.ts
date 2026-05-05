@@ -7,10 +7,15 @@ let muted = false
 const MUTE_KEY = 'codon-collider:muted-v1'
 
 function loadMutedFromStorage(): boolean {
+  // Default to muted on first visit. Players who have explicitly set
+  // a preference (either 1 or 0) get their saved choice; anything else
+  // (no key, cleared storage, etc.) starts muted.
   try {
-    return localStorage.getItem(MUTE_KEY) === '1'
+    const v = localStorage.getItem(MUTE_KEY)
+    if (v === '0') return false
+    return true
   } catch {
-    return false
+    return true
   }
 }
 
