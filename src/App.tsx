@@ -129,6 +129,7 @@ function App() {
   const [labBriefingOpen, setLabBriefingOpen] = useState(false)
   const [pendingTargetSlot, setPendingTargetSlot] = useState<number | null>(null)
   const [gameOverSequenceDone, setGameOverSequenceDone] = useState(false)
+  const [gameOverDialogDismissed, setGameOverDialogDismissed] = useState(false)
 
   // Achievements + lifetime stats (persisted, loaded once)
   const [unlocked, setUnlockedState] = useState<UnlockedAchievements>(() =>
@@ -303,6 +304,7 @@ function App() {
   useEffect(() => {
     if (!game.isOver) {
       setGameOverSequenceDone(false)
+      setGameOverDialogDismissed(false)
       // Just transitioned from over → not-over: evaluate nudge.
       if (wasOverRef.current && shouldShowNudge(engagement) && !supportNudgeOpen) {
         setSupportNudgeOpen(true)
@@ -459,6 +461,13 @@ function App() {
         pendingPostRef.current = doSubmit
         setBiokeaPromptScore(game.score)
         setBiokeaPromptOpen(true)
+      } else if (!getDisplayName()) {
+        // BioKEA prompt suppressed (subscribed/skipped) but no per-game
+        // display name set yet — submitScore would silently no-op. Fall
+        // back to the per-game DisplayNameModal so the score actually
+        // lands on the leaderboard.
+        setPendingDisplayNameAction(() => doSubmit)
+        setDisplayNameModalOpen(true)
       } else {
         doSubmit()
       }
@@ -675,11 +684,19 @@ function App() {
       />
 
       <GameOverDialog
-        open={game.isOver && gameOverSequenceDone}
+        open={game.isOver && gameOverSequenceDone && !gameOverDialogDismissed}
         score={game.score}
         highestTier={game.highestTier}
         variant="over"
         onRestart={game.restart}
+        onMainMenu={() => {
+          setGameOverDialogDismissed(true)
+          try {
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          } catch {
+            // ignore
+          }
+        }}
         shareData={
           mode === 'daily' || mode === 'custom'
             ? {

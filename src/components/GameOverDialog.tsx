@@ -1,4 +1,4 @@
-import { Share2, Trophy } from 'lucide-react'
+import { Home, Share2, Trophy } from 'lucide-react'
 import { toast } from 'sonner'
 import { TIERS } from '@/lib/tiers'
 import { buildShareString } from '@/lib/daily'
@@ -11,6 +11,7 @@ type Props = {
   variant: 'over' | 'win'
   onDismiss?: () => void
   onViewLeaderboard?: () => void
+  onMainMenu?: () => void
   shareData?: {
     date: string
     variant: 'classic' | 'lab'
@@ -27,6 +28,7 @@ export function GameOverDialog({
   variant,
   onDismiss,
   onViewLeaderboard,
+  onMainMenu,
   shareData,
 }: Props) {
   if (!open) return null
@@ -133,6 +135,15 @@ export function GameOverDialog({
           >
             {shareData ? 'Retry' : 'New Run'}
           </button>
+          {onMainMenu && (
+            <button
+              onClick={onMainMenu}
+              className="inline-flex items-center gap-1.5 rounded-md border border-slate-400/30 bg-slate-800/60 px-5 py-2.5 font-mono text-xs uppercase tracking-[0.2em] text-slate-200 transition-colors hover:bg-slate-700/60"
+            >
+              <Home className="h-3.5 w-3.5" />
+              Main Menu
+            </button>
+          )}
         </div>
       </div>
     </div>
