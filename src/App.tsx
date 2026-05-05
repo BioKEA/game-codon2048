@@ -30,7 +30,8 @@ import {
   type EngagementStats,
 } from '@/lib/engagement'
 import { dayNumber } from '@/lib/daily'
-import { getDisplayName, submitScore } from '@/lib/leaderboard'
+import { getDisplayName, setDisplayName, submitScore } from '@/lib/leaderboard'
+import { BiokeaLeaderboardPrompt } from '@/components/BiokeaLeaderboardPrompt'
 import { Header } from '@/components/Header'
 import { ScorePanel } from '@/components/ScorePanel'
 import { Board } from '@/components/Board'
@@ -109,6 +110,11 @@ function App() {
   const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   const [displayNameModalOpen, setDisplayNameModalOpen] = useState(false)
   const [customSeedModalOpen, setCustomSeedModalOpen] = useState(false)
+  // BiokeaLeaderboardPrompt state — game-end "post your score" modal that
+  // also offers the optional Lab updates email opt-in.
+  const [biokeaPromptOpen, setBiokeaPromptOpen] = useState(false)
+  const [biokeaPromptScore, setBiokeaPromptScore] = useState<number>(0)
+  const pendingPostRef = useRef<(() => void) | null>(null)
 
   // Initialize from URL — if ?seed=X is present on first load, switch to custom mode.
   const initialUrlSeed = useState(() => readSeedFromUrl())[0]
@@ -152,6 +158,7 @@ function App() {
       labBriefingOpen ||
       leaderboardOpen ||
       displayNameModalOpen ||
+      biokeaPromptOpen ||
       customSeedModalOpen ||
       supportNudgeOpen,
     difficulty,
@@ -444,8 +451,11 @@ function App() {
       }
 
       if (!getDisplayName()) {
-        setPendingDisplayNameAction(() => doSubmit)
-        setDisplayNameModalOpen(true)
+        // Open the BioKEA leaderboard prompt — captures handle (required)
+        // and optional email subscription, then runs doSubmit().
+        pendingPostRef.current = doSubmit
+        setBiokeaPromptScore(game.score)
+        setBiokeaPromptOpen(true)
       } else {
         doSubmit()
       }
@@ -623,6 +633,26 @@ function App() {
         onSubmit={(seed) => applyCustomSeed(seed)}
         currentSeed={customSeed}
       />
+      {biokeaPromptOpen && (
+        <BiokeaLeaderboardPrompt
+          trigger="game-end"
+          gameSlug="codon2048"
+          gameTitle="Codon Collider"
+          score={{ value: biokeaPromptScore.toLocaleString(), label: 'Score', unit: 'pts' }}
+          defaultHandle={getDisplayName() ?? ''}
+          onSubmit={(result) => {
+            setDisplayName(result.handle)
+            setBiokeaPromptOpen(false)
+            const action = pendingPostRef.current
+            pendingPostRef.current = null
+            if (action) action()
+          }}
+          onSkip={() => {
+            setBiokeaPromptOpen(false)
+            pendingPostRef.current = null
+          }}
+        />
+      )}
 
       <SupportNudge
         open={supportNudgeOpen}
