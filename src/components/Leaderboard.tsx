@@ -97,14 +97,14 @@ export function Leaderboard({
     <>
       <div
         className={cn(
-          'fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity duration-300',
+          'fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm transition-opacity duration-300',
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
         )}
         onClick={onClose}
       />
       <aside
         className={cn(
-          'fixed inset-y-0 right-0 z-50 w-full max-w-md transform transition-transform duration-300 ease-out',
+          'fixed inset-y-0 right-0 z-[70] w-full max-w-md transform transition-transform duration-300 ease-out',
           'border-l border-amber-300/25 bg-slate-950/98 flex flex-col',
           open ? 'translate-x-0' : 'translate-x-full',
         )}
