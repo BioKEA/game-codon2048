@@ -31,7 +31,7 @@ import {
 } from '@/lib/engagement'
 import { dayNumber } from '@/lib/daily'
 import { getDisplayName, setDisplayName, submitScore } from '@/lib/leaderboard'
-import { BiokeaLeaderboardPrompt } from '@/components/BiokeaLeaderboardPrompt'
+import { BiokeaLeaderboardPrompt, shouldShowBiokeaPrompt } from '@/components/BiokeaLeaderboardPrompt'
 import { Header } from '@/components/Header'
 import { ScorePanel } from '@/components/ScorePanel'
 import { Board } from '@/components/Board'
@@ -450,9 +450,12 @@ function App() {
           })
       }
 
-      if (!getDisplayName()) {
-        // Open the BioKEA leaderboard prompt — captures handle (required)
-        // and optional email subscription, then runs doSubmit().
+      // Open the BioKEA leaderboard prompt unless the player has either
+      // already subscribed via this prompt or skipped it this session.
+      // Pre-populates handle if one is already stored, so returning
+      // players who haven't subscribed get one more chance per session.
+      // If they skip, doSubmit still posts (handle is set).
+      if (shouldShowBiokeaPrompt()) {
         pendingPostRef.current = doSubmit
         setBiokeaPromptScore(game.score)
         setBiokeaPromptOpen(true)
@@ -649,7 +652,11 @@ function App() {
           }}
           onSkip={() => {
             setBiokeaPromptOpen(false)
+            // If a handle is already stored (returning player who just
+            // skipped the email opt-in), still post the score using it.
+            const action = pendingPostRef.current
             pendingPostRef.current = null
+            if (getDisplayName() && action) action()
           }}
         />
       )}
