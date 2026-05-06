@@ -58,12 +58,17 @@ const VARIANT_KEY = 'codon-collider:variant-v1'
 const LAB_BRIEFING_KEY = 'codon-collider:lab-briefing-seen-v1'
 
 function loadMode(): GameMode {
+  // Default new-visitor mode is 'daily' so first-run players land on the
+  // shared daily seed (every other BioKEA game uses daily mode by
+  // default, and the daily leaderboard is the social hook). Returning
+  // players who explicitly switched to endless or custom keep their
+  // preference via the stored value.
   try {
     const v = localStorage.getItem(MODE_KEY)
-    if (v === 'daily' || v === 'custom') return v
-    return 'endless'
+    if (v === 'daily' || v === 'custom' || v === 'endless') return v as GameMode
+    return 'daily'
   } catch {
-    return 'endless'
+    return 'daily'
   }
 }
 
