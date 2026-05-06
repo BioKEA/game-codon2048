@@ -451,11 +451,13 @@ function App() {
                 description: 'Open the leaderboard to see your rank',
               })
               setLeaderboardRefreshKey((k) => k + 1)
-              // Golden Sample 26: server validates highestTier >= 11
-              // (Ecosystem). The handle the prompt set lives in
-              // localStorage; tryClaimGoldenSample reads it.
+              // Golden Sample 26: gate on this run's highestTier so a
+              // long-ago Population-tier run doesn't fire the reveal
+              // on a low-tier loss today. Server still cross-checks.
               // I won't tell. That would be cheating.
-              if (seedKind === 'daily') void tryClaimGoldenSample()
+              if (seedKind === 'daily') {
+                void tryClaimGoldenSample({ highestTier: game.highestTier })
+              }
             }
           })
           .catch(() => {

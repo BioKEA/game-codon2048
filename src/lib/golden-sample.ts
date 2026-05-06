@@ -67,9 +67,20 @@ interface GoldenFoundDetail {
   sentence: string
 }
 
-export async function tryClaimGoldenSample(handle?: string): Promise<void> {
+// Gate on the run's highestTier so a long-ago Population-tier run
+// doesn't fire the reveal on a low-tier loss today.
+const SLOT_THRESHOLD_TIER = 10
+
+export async function tryClaimGoldenSample(
+  args: { handle?: string; highestTier?: number } = {},
+): Promise<void> {
   if (alreadyHeld()) return
-  const h = handle ?? readHandle()
+  if (
+    typeof args.highestTier === 'number' &&
+    args.highestTier < SLOT_THRESHOLD_TIER
+  )
+    return
+  const h = args.handle ?? readHandle()
   if (!h) return
   let res: Response
   try {
