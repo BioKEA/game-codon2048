@@ -31,6 +31,7 @@ import {
 } from '@/lib/engagement'
 import { dayNumber } from '@/lib/daily'
 import { getDisplayName, setDisplayName, submitScore } from '@/lib/leaderboard'
+import { tryClaimGoldenSample } from '@/lib/golden-sample'
 import { BiokeaLeaderboardPrompt, shouldShowBiokeaPrompt } from '@/components/BiokeaLeaderboardPrompt'
 import { Header } from '@/components/Header'
 import { ScorePanel } from '@/components/ScorePanel'
@@ -445,6 +446,11 @@ function App() {
                 description: 'Open the leaderboard to see your rank',
               })
               setLeaderboardRefreshKey((k) => k + 1)
+              // Golden Sample 26: server validates highestTier >= 11
+              // (Ecosystem). The handle the prompt set lives in
+              // localStorage; tryClaimGoldenSample reads it.
+              // I won't tell. That would be cheating.
+              if (seedKind === 'daily') void tryClaimGoldenSample()
             }
           })
           .catch(() => {
