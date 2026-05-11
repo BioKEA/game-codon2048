@@ -1,8 +1,9 @@
 // src/lib/golden-sample.ts
 //
 // Codon Collider's slice of the Golden Sample 26 hunt. Slot 5 unlocks
-// when any daily-mode run records a highestTier >= 11 (the Ecosystem
-// tier — see lib/tiers.ts).
+// when any daily-mode run records a highestTier >= 10 (the Population
+// tier — see lib/tiers.ts; lowered from Ecosystem in an earlier round
+// because Species → Ecosystem was a brutal last-stretch gate).
 //
 // The actual server-side validation lives in
 // website-biokea/src/lib/golden-sample/validate.ts. This file just

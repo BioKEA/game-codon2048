@@ -69,7 +69,17 @@ export function setDisplayName(name: string): string {
   return trimmed
 }
 
-type PersonalBests = Record<string, { score: number; submitted: boolean }>
+// `bestTier` tracks the max `highestTier` ever achieved on this seed,
+// independent of score. Without this, a run that breaks a tier record
+// but not a score record never gets persisted to the scores table,
+// which means the Golden Sample 26 server validator (which reads
+// `metadata.highestTier` from score rows) can't see the tier
+// evidence — and the player who legitimately reached Population
+// tier never gets credited.
+type PersonalBests = Record<
+  string,
+  { score: number; submitted: boolean; bestTier?: number }
+>
 
 function pbKey(variant: string, seedKind: SeedKind, seedId: string): string {
   return `${variant}/${seedKind}/${seedId}`
@@ -129,7 +139,14 @@ export async function submitScore(args: {
   const all = loadPersonalBests()
   const key = pbKey(args.variant, args.seedKind, args.seedId)
   const existing = all[key]
-  if (existing && existing.score >= args.score) {
+  const prevBestTier = existing?.bestTier ?? 0
+  const scoreIsPB = !existing || args.score > existing.score
+  const tierIsPB = args.highestTier > prevBestTier
+  // Submit when EITHER the score OR the tier is a new personal best on
+  // this seed. The score-only gate previously dropped runs that hit a
+  // tier record but a lower score — which silently blocked the Golden
+  // Sample 26 server validator from ever seeing the tier evidence.
+  if (!scoreIsPB && !tierIsPB) {
     return { ok: true, submitted: false, reason: 'not a personal best' }
   }
 
@@ -156,7 +173,11 @@ export async function submitScore(args: {
     return { ok: false, error: msg }
   }
 
-  all[key] = { score: args.score, submitted: true }
+  all[key] = {
+    score: Math.max(existing?.score ?? 0, args.score),
+    submitted: true,
+    bestTier: Math.max(prevBestTier, args.highestTier),
+  }
   savePersonalBests(all)
   return { ok: true, submitted: true }
 }

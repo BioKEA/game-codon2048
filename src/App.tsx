@@ -451,13 +451,19 @@ function App() {
                 description: 'Open the leaderboard to see your rank',
               })
               setLeaderboardRefreshKey((k) => k + 1)
-              // Golden Sample 26: gate on this run's highestTier so a
-              // long-ago Population-tier run doesn't fire the reveal
-              // on a low-tier loss today. Server still cross-checks.
-              // I won't tell. That would be cheating.
-              if (seedKind === 'daily') {
-                void tryClaimGoldenSample({ highestTier: game.highestTier })
-              }
+            }
+            // Golden Sample 26: try to claim whenever the *current
+            // run's* tier meets the threshold on a daily seed, even
+            // if submitScore decided this run isn't a personal best
+            // worth re-submitting. The client guard in
+            // tryClaimGoldenSample already dedupes against
+            // localStorage and the server still cross-checks against
+            // the scores table — but with the score+tier PB gate fix
+            // in submitScore above, the tier-record row will already
+            // be in the table by this point. I won't tell. That
+            // would be cheating.
+            if (result.ok && seedKind === 'daily') {
+              void tryClaimGoldenSample({ highestTier: game.highestTier })
             }
           })
           .catch(() => {
